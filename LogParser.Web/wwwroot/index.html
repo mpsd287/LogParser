@@ -7,15 +7,21 @@
         #dropzone { border: 2px dashed #888; padding: 40px; text-align: center; margin-bottom: 20px; }
         #dropzone.hover { background-color: #eef; }
         .log { white-space: pre; border-bottom: 1px solid #ddd; padding: 4px; }
+        #filename { margin-bottom: 20px; }
+        #filecontent { white-space: pre; border: 1px solid #ddd; padding: 4px; margin-top: 20px; }
     </style>
 </head>
 <body>
     <h1>Log Parser</h1>
     <div id="dropzone">Drop log file here</div>
+    <div id="filename"></div>
     <div id="search"></div>
+    <pre id="filecontent"></pre>
     <div id="results"></div>
     <script>
 const drop = document.getElementById('dropzone');
+const filenameDiv = document.getElementById('filename');
+const fileContent = document.getElementById('filecontent');
 
 drop.addEventListener('dragover', e => {
     e.preventDefault();
@@ -29,6 +35,8 @@ drop.addEventListener('drop', async e => {
     const form = new FormData();
     form.append('file', file);
     await fetch('/upload', { method: 'POST', body: form });
+    filenameDiv.textContent = `Uploaded: ${file.name}`;
+    fileContent.textContent = await file.text();
     loadProviders();
 });
 
