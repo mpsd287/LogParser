@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Log Parser</title>
+    <style>
+        #dropzone { border: 2px dashed #888; padding: 40px; text-align: center; margin-bottom: 20px; }
+        #dropzone.hover { background-color: #eef; }
+        .log { white-space: pre; border-bottom: 1px solid #ddd; padding: 4px; }
+        #filename { margin-bottom: 20px; }
+        #filecontent { white-space: pre; border: 1px solid #ddd; padding: 4px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Log Parser</h1>
+    <div id="dropzone">Drop log file here</div>
+    <div id="filename"></div>
+    <div id="search"></div>
+    <pre id="filecontent"></pre>
+    <div id="results"></div>
+    <script>
+const drop = document.getElementById('dropzone');
+const filenameDiv = document.getElementById('filename');
+const fileContent = document.getElementById('filecontent');
+
+drop.addEventListener('dragover', e => {
+    e.preventDefault();
+    drop.classList.add('hover');
+});
+drop.addEventListener('dragleave', () => drop.classList.remove('hover'));
+drop.addEventListener('drop', async e => {
+    e.preventDefault();
+    drop.classList.remove('hover');
+    const file = e.dataTransfer.files[0];
+    const form = new FormData();
+    form.append('file', file);
+    await fetch('/upload', { method: 'POST', body: form });
+    filenameDiv.textContent = `Uploaded: ${file.name}`;
+    fileContent.textContent = await file.text();
+    loadProviders();
+});
+
+async function loadProviders() {
+    const resp = await fetch('/providers');
+    const providers = await resp.json();
+    const container = document.getElementById('search');
+    container.innerHTML = '';
+    const comb = document.createElement('select');
+    comb.id = 'combinator';
+    ['and','or'].forEach(c => { const o=document.createElement('option'); o.value=c; o.text=c.toUpperCase(); comb.appendChild(o); });
+    container.appendChild(comb);
+    providers.forEach(p => {
+        const div = document.createElement('div');
+        const chk = document.createElement('input');
+        chk.type='checkbox'; chk.id='chk_'+p.name;
+        div.appendChild(chk);
+        const lbl = document.createElement('label');
+        lbl.textContent = p.name;
+        div.appendChild(lbl);
+        p.parameters.forEach(param => {
+            const inp = document.createElement('input');
+            inp.id = p.name + '_' + param.name;
+            if (param.type === 'DateTime') inp.type = 'datetime-local';
+            else if (param.type === 'Int') inp.type = 'number';
+            else inp.type = 'text';
+            div.appendChild(document.createTextNode(param.name + ':'));
+            div.appendChild(inp);
+        });
+        container.appendChild(div);
+    });
+    const btn = document.createElement('button');
+    btn.textContent = 'Search';
+    btn.onclick = search;
+    container.appendChild(btn);
+}
+
+async function search() {
+    const providers = await (await fetch('/providers')).json();
+    const selected = [];
+    providers.forEach(p => {
+        if (document.getElementById('chk_'+p.name).checked) {
+            const params = {};
+            p.parameters.forEach(param => {
+                const val = document.getElementById(p.name+'_'+param.name).value;
+                if (val) params[param.name] = val;
+            });
+            selected.push({ name: p.name, parameters: params });
+        }
+    });
+    const req = { combinator: document.getElementById('combinator').value, providers: selected };
+    const resp = await fetch('/search', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(req) });
+    const results = await resp.json();
+    const resDiv = document.getElementById('results');
+    resDiv.innerHTML = '';
+    results.forEach(r => {
+        const div = document.createElement('div');
+        div.className = 'log';
+        div.textContent = `[${r.date}] ${r.severity}: ${r.message}`;
+        resDiv.appendChild(div);
+    });
+}
+    </script>
+</body>
+</html>
