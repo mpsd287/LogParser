@@ -23,7 +23,11 @@ public class SearchService
 
         foreach (var selection in request.Providers)
         {
-            var provider = _providers.First(p => p.Name == selection.Name);
+            var provider = _providers.FirstOrDefault(p => p.Name == selection.Name);
+            if (provider == null)
+            {
+                throw new InvalidOperationException($"No provider found with name '{selection.Name}'.");
+            }
             var parameters = new Dictionary<string, object>();
             foreach (var param in provider.Parameters)
             {
