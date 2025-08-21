@@ -15,4 +15,4 @@ cd LogParser.Web
 dotnet run
 ```
 
-Die Anwendung steht anschließend unter `http://localhost:5000` bereit.
+Die Anwendung steht anschließend unter `http://localhost:5261` (HTTP) bzw. `https://localhost:7192` (HTTPS) bereit.
